@@ -1,4 +1,4 @@
-FROM node:20-buster as installer
+FROM node:20-buster@sha256:REPLACE_WITH_DIGEST as installer # Replace REPLACE_WITH_DIGEST with the actual SHA256 digest of the secure base image.
 COPY . /juice-shop
 WORKDIR /juice-shop
 RUN npm i -g typescript ts-node
