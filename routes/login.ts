@@ -24,27 +24,27 @@ module.exports = function login () {
       .then(([basket]: [BasketModel, boolean]) => {
         const token = security.authorize(user)
         user.bid = basket.id // keep track of original basket
-        security.authenticatedUsers.put(token, user)
-        res.json({ authentication: { token, bid: basket.id, umail: user.data.email } })
-      }).catch((error: Error) => {
-        next(error)
-      })
-  }
+      security.authenticatedUsers.put(token, user)
+      res.json({ authentication: { token, bid: basket.id, umail: user.data.email } })
+    }).catch((error: Error) => {
+      next(error)
+    })
+}
 
-  return (req: Request, res: Response, next: NextFunction) => {
-    verifyPreLoginChallenges(req) // vuln-code-snippet hide-line
-    models.sequelize.query(`SELECT * FROM Users WHERE email = '${req.body.email || ''}' AND password = '${security.hash(req.body.password || '')}' AND deletedAt IS NULL`, { model: UserModel, plain: true }) // vuln-code-snippet vuln-line loginAdminChallenge loginBenderChallenge loginJimChallenge
-      .then((authenticatedUser) => { // vuln-code-snippet neutral-line loginAdminChallenge loginBenderChallenge loginJimChallenge
-        const user = utils.queryResultToJson(authenticatedUser)
-        if (user.data?.id && user.data.totpSecret !== '') {
-          res.status(401).json({
-            status: 'totp_token_required',
-            data: {
-              tmpToken: security.authorize({
-                userId: user.data.id,
-                type: 'password_valid_needs_second_factor_token'
-              })
-            }
+return (req: Request, res: Response, next: NextFunction) => {
+  verifyPreLoginChallenges(req) // vuln-code-snippet hide-line
+  models.sequelize.query(`SELECT * FROM Users WHERE email = :email AND password = :password AND deletedAt IS NULL`, { replacements: { email: req.body.email || '', password: security.hash(req.body.password || '') }, model: UserModel, plain: true }) // vuln-code-snippet vuln-line loginAdminChallenge loginBenderChallenge loginJimChallenge
+    .then((authenticatedUser) => { // vuln-code-snippet neutral-line loginAdminChallenge loginBenderChallenge loginJimChallenge
+      const user = utils.queryResultToJson(authenticatedUser)
+      if (user.data?.id && user.data.totpSecret !== '') {
+        res.status(401).json({
+          status: 'totp_token_required',
+          data: {
+            tmpToken: security.authorize({
+              userId: user.data.id,
+              type: 'password_valid_needs_second_factor_token'
+            })
+          }
           })
         } else if (user.data?.id) {
           // @ts-expect-error FIXME some properties missing in user - vuln-code-snippet hide-line
